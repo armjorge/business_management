@@ -177,6 +177,7 @@ def generador_cash_flow(path_column_dict):
     return df_total
 
 def business_management(folder_root): 
+    print('Módulo del repositorio privado https://github.com/armjorge/business_management')
     working_folder = os.path.join(folder_root, "Implementación")
     #add_to_gitignore(folder_root, working_folder)
     not os.path.exists(working_folder) and create_directory_if_not_exists(working_folder)
