@@ -1,12 +1,5 @@
 
 import os 
-import sys 
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.common.exceptions import TimeoutException
 from datetime import datetime
 import yaml
 import pandas as pd
@@ -116,9 +109,10 @@ def genera_partidas_presupuestales(egresos_path, ingresos_path):
 def generador_validador_renglones(folder, columnas_folder):
     print(message_print(f'Iniciando el generador de cashflows para {os.path.basename(folder)}'))
     print("\nEste script va a leer los archivos xlsx en Ingresos y Egresos, si la columna fecha y la columna importe son válidas, les asignará un código único al renglón\n")
-    counter = 0 
+    
 
     for filename in os.listdir(folder):
+        counter = 0
         if filename.endswith(".xlsx"):
             file_path = os.path.join(folder, filename)
             try:
