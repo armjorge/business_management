@@ -150,7 +150,7 @@ def generador_validador_renglones(folder, columnas_folder):
             else:
                 print(f"ℹ️ {filename} sin filas válidas para actualizar.")
 
-def generador_cash_flow(path_column_dict):
+def generador_cash_flow(path_column_dict, columnas_ordenadas):
     df_total = pd.DataFrame()
 
     for path, expected_columns in path_column_dict.items():
@@ -173,11 +173,49 @@ def generador_cash_flow(path_column_dict):
 
                 # Agregar al DataFrame total
                 df_total = pd.concat([df_total, df_file], ignore_index=True)
+    df_total = df_total[columnas_ordenadas]
 
     return df_total
 
+def accumulative_cash_flow(df_total, columnas_acumulativas):
+    print(message_print('Iniciando la generación del flujo de caja acumulativo'))
+    fecha_col = columnas_acumulativas['Fecha']
+    ingresos_col = columnas_acumulativas['Ingresos']
+    egresos_col = columnas_acumulativas['Egresos']
+    
+    df_total[fecha_col] = pd.to_datetime(df_total[fecha_col], dayfirst=True, errors='coerce')
+    
+    df_agrupado = df_total.groupby(fecha_col).agg({
+        ingresos_col: 'sum',
+        egresos_col: 'sum'
+    }).rename(columns={ingresos_col: 'Ingresos', egresos_col: 'Egresos'}).fillna(0).sort_index(ascending=True)
+    
+    df_agrupado['Balance'] = df_agrupado['Ingresos'] - df_agrupado['Egresos']
+    df_agrupado['Acumulativo'] = df_agrupado['Balance'].cumsum()
+    df_agrupado = df_agrupado.reset_index()
+    
+    return df_agrupado
+
+def save_dfs_to_excel(path, sheet_to_df):
+    """
+    Guarda los DataFrames en hojas de un archivo Excel.
+    - Si el archivo no existe, lo crea.
+    - Si existe, sobreescribe las hojas indicadas.
+    """
+    mode = 'a' if os.path.exists(path) else 'w'
+    if mode == 'a':
+        # Añadir y sobreescribir hojas en archivo existente
+        with pd.ExcelWriter(path, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+            for sheet, df in sheet_to_df.items():
+                df.to_excel(writer, sheet_name=sheet, index=False)
+    else:
+        # Crear nuevo archivo
+        with pd.ExcelWriter(path, engine='openpyxl', mode='w') as writer:
+            for sheet, df in sheet_to_df.items():
+                df.to_excel(writer, sheet_name=sheet, index=False)
+                
 def business_management(folder_root): 
-    print('Módulo del repositorio privado https://github.com/armjorge/business_management')
+    print('\nMódulo del repositorio privado https://github.com/armjorge/business_management\n')
     working_folder = os.path.join(folder_root, "Implementación")
     #add_to_gitignore(folder_root, working_folder)
     not os.path.exists(working_folder) and create_directory_if_not_exists(working_folder)
@@ -191,7 +229,9 @@ def business_management(folder_root):
     not os.path.exists(ingresos_path) and create_directory_if_not_exists(ingresos_path)    
     print(message_print('Script de Administración de Negocios'))
     columnas_egresos = ['fecha dd mm yyyy', 'Concepto', f"{os.path.basename(egresos_path)}", 'Código Renglón']  
-    columnas_ingresos = ['fecha dd mm yyyy', 'Concepto', f"{os.path.basename(ingresos_path)}", 'Código Renglón']  
+    columnas_ingresos = ['fecha dd mm yyyy', 'Concepto', f"{os.path.basename(ingresos_path)}", 'Código Renglón'] 
+    columnas_ordenadas = ['fecha dd mm yyyy', 'Concepto', f"{os.path.basename(ingresos_path)}", f"{os.path.basename(egresos_path)}", 'Código Renglón'] 
+    columnas_acumulativas = {'Fecha': 'fecha dd mm yyyy', 'Ingresos': f"{os.path.basename(ingresos_path)}", 'Egresos': f"{os.path.basename(egresos_path)}"}
     while True:
         user_input = input("¿Quieres 1) generar archivos de ingreso y egresos o 2) generar el flujo de caja?: ").strip()
         if user_input == "1":
@@ -201,10 +241,15 @@ def business_management(folder_root):
             generador_validador_renglones(egresos_path, columnas_egresos)
             generador_validador_renglones(ingresos_path, columnas_ingresos)
             path_column_dict = {egresos_path: columnas_egresos, ingresos_path: columnas_ingresos}
-            df_total = generador_cash_flow(path_column_dict)
+            df_total = generador_cash_flow(path_column_dict, columnas_ordenadas)
+            df_agrupado = accumulative_cash_flow(df_total, columnas_acumulativas)
+
+            #path_excel = os.path.join(presupuestos_path, "Presupuesto.xlsx")
             path_excel = os.path.join(presupuestos_path, "Presupuesto.xlsx")
+            sheet_to_df = {'Flujo de caja': df_agrupado, 'Desglose': df_total}
             # Guardar DataFrame como archivo Excel
-            df_total.to_excel(path_excel, index=False)            
+            save_dfs_to_excel(path_excel, sheet_to_df)
+
             print(message_print(f"Se generó el archivo {os.path.basename(path_excel)} con la información de ingresos y egresos"))
             break
         else:
