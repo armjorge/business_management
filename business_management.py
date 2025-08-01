@@ -230,7 +230,7 @@ def business_management(folder_root):
         user_input = input("¿Quieres 1) generar archivos de ingreso y egresos o 2) generar el flujo de caja?: ").strip()
         if user_input == "1":
             genera_partidas_presupuestales(egresos_path, ingresos_path)
-            break
+            
         elif user_input == "2":
             generador_validador_renglones(egresos_path, columnas_egresos)
             generador_validador_renglones(ingresos_path, columnas_ingresos)
@@ -245,7 +245,7 @@ def business_management(folder_root):
             save_dfs_to_excel(path_excel, sheet_to_df)
 
             print(message_print(f"Se generó el archivo {os.path.basename(path_excel)} con la información de ingresos y egresos"))
-            break
+            
         else:
             print("Entrada no válida. Por favor, escribe 1 o 2.")    
     
